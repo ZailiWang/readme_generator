@@ -1,0 +1,8 @@
+{
+  "model_list": [
+    "Llama-3.1-8B-Instruct",
+    "Llama-3.1-8B-Instruct-FP8"
+  ],
+  "models": {},
+  "merged_readme": null
+}

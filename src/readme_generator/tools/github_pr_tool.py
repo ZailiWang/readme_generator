@@ -164,8 +164,9 @@ class PRPipeline:
 
 class GithubPRTool():
     
-    @tool("根据PR所需的相关参数,上传对应repo的branch的pr")
+    @tool("Upload PR")
     def upload_pr_for_repo(github_token:str,repo:str,base_branch:str,branch_name:str,context:Dict[str,str],pr_title:str,pr_body:str)->Optional[PullRequest]:
+        """Based on the relevant parameters required for the PR, submit the PR to the corresponding branch of the repository."""
         try:
             pipeline=PRPipeline(github_token,repo,base_branch)
             branch,is_new,existing_pr=pipeline.step1_check_resources(branch_name)
@@ -175,8 +176,9 @@ class GithubPRTool():
             traceback.print_exc()
             raise e
         
-    @tool("根据PR所需的相关参数,验证对应repo的branch的pr是否存在")
+    @tool("Validate PR")
     def validate_pr_exists_for_repo(github_token:str,repo:str,base_branch:str,branch_name:str,state:str="open"):
+        """Verify whether the PR for the corresponding repository branch exists based on the relevant parameters required for the PR."""
         try:
             pipeline=PRPipeline(github_token,repo,base_branch)
             client=pipeline.client
@@ -200,8 +202,9 @@ class GithubPRTool():
             return False,None
             
 
-    @tool("根据PR所需的相关参数，创建新的对应repo的branch的pr")
+    @tool("Create PR")
     def create_new_pr_for_repo(github_token:str,repo:str,base_branch:str,branch_name:str,pr_title:str,pr_body:str,force:bool=False)->Optional[PullRequest]:
+        """Create a new PR for the corresponding branch of the repository based on the relevant parameters required for the PR."""
         print(f"[需求 3]尝试创建新 PR:分支 {branch_name}")
         try:
             pipeline=PRPipeline(github_token,repo,base_branch)
