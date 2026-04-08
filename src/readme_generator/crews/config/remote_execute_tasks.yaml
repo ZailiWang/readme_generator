@@ -1,0 +1,5 @@
+remote_execution_task:
+  description: >
+    Use the memory_retrieve tool to get the generated readme_content from GLOBAL_MEMORY.Use the extract_shell_commands tool to parse out executable shell or cmd commands from the README.Remotely connect to the server and run these commands in the specified remote_folder.Parse the execution output, analyze errors if any, and store execution results and logs into GLOBAL_MEMORY via memory_store.
+  expected_output: >
+    Command execution result or error analysis report, and all execution information has been stored in GLOBAL_MEMORY.

@@ -1,0 +1,6 @@
+readme_generate_task:
+  description: >
+    Automatically retrieve model_name_list, model_url_list and model_id_list from GLOBAL_MEMORY using the memory_retrieve tool.Using the given single-model reference example {reference_example} as a template, generate a complete, standardized README document for each model in the lists.Output a list of README contents that corresponds one-to-one with model_name_list, model_url_list, and model_id_list.Use the memory_store tool to save the generated README list into GLOBAL_MEMORY for subsequent execution and storage.
+  expected_output: >
+    A list of complete, structured model README contents, with each README corresponding to one model in model_name_list, model_url_list, and model_id_list.All contents are synchronized to GLOBAL_MEMORY.
+  agent: readme_generator_agent

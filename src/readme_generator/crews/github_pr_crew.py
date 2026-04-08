@@ -7,19 +7,24 @@ from tools.memory_tool import MemoryTool
 
 @CrewBase
 class GithubPRCrew:
-    agents_config="config/agents.yaml"
-    tasks_config="config/tasks.yaml"
+    agents_config="config/github_pr_agents.yaml"
+    tasks_config="config/github_pr_tasks.yaml"
     llm=CustomChatOpenAI(base_url="http://10.54.34.78:30000/v1",password="empty")
 
     @agent 
     def github_agent(self)->Agent:
-        github_tool=GithubPRTool()
-        memory_tool=MemoryTool()
+        github_create_pr_tool=GithubPRTool.create_new_pr_for_repo
+        github_validate_pr_tool=GithubPRTool.validate_pr_exists_for_repo
+        github_upload_pr_tool=GithubPRTool.upload_pr_for_repo
+        memory_store_tool=MemoryTool.store_memory
+        memory_retrieve_tool=MemoryTool.retrieve_memory
+        memory_get_key_tool=MemoryTool.get_memory_key
         return Agent(
             config=self.agents_config["github_agent"],
-            tools=[github_tool,memory_tool],
+            tools=[github_create_pr_tool,github_validate_pr_tool,github_upload_pr_tool,memory_store_tool,memory_retrieve_tool,memory_get_key_tool],
             llm=self.llm,
-            verbose=True
+            verbose=True,
+            allow_delegation=True,
         )
     
     @task 
