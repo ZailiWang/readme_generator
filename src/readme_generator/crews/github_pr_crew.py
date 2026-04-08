@@ -1,5 +1,6 @@
 from crewai import Agent,Crew,Process,Task
 from crewai.project import CrewBase,agent,crew,task
+from crewai.llm import LLM
 from tools.chatopenai import CustomChatOpenAI
 from tools.github_pr_tool import GithubPRTool
 from tools.memory_tool import MemoryTool
@@ -9,7 +10,11 @@ from tools.memory_tool import MemoryTool
 class GithubPRCrew:
     agents_config="config/github_pr_agents.yaml"
     tasks_config="config/github_pr_tasks.yaml"
-    llm=CustomChatOpenAI(base_url="http://10.54.34.78:30000/v1",password="empty")
+    llm = LLM(
+        model="your-local-model",
+        base_url="http://10.54.34.78:30000/v1",
+        api_key="empty"
+    )
 
     @agent 
     def github_agent(self)->Agent:

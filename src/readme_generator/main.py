@@ -18,6 +18,12 @@ def confirm_continue(message="continue?(y/n)"):
         print("stop!")
         sys.exit(0)
 
+def confirm_skip(message="skip?(y/n)"):
+    choice=input(message).strip().lower()
+    if choice!="y":
+        return False
+    return True
+
 class ModelWorkflowState(BaseModel):
     id: str = "model-workflow-default"
     model_list:List[str]=[]
@@ -63,34 +69,39 @@ class ModelWorkflowFlow(Flow[ModelWorkflowState]):
     @start("wait_next_run")
     def run_model_search(self):
         print("\n启动模型搜索智能体")
-        ModelSearchCrew().crew().kickoff()
+        if not confirm_skip("是否跳过模型搜索？"):
+            ModelSearchCrew().crew().kickoff()
         confirm_continue("是否进入 README 生成？")
         print("模型信息已存入全局内存")
 
     @listen(run_model_search)
     def run_readme_generation(self):
         print("\n启动README生成智能体")
-        ReadmeGeneratorCrew().crew().kickoff()
+        if not confirm_skip("是否跳过README生成？"):
+            ReadmeGeneratorCrew().crew().kickoff()
         self.state.all_readmes_generated=True
         confirm_continue("是否执行远程测试？")
 
     @listen(run_readme_generation)
     def run_remote_execution(self):
         print("\n启动远程命令执行测试智能体")
-        RemoteExecutionCrew().crew().kickoff()
+        if not confirm_skip("是否跳过执行测试智能体？"):
+            RemoteExecutionCrew().crew().kickoff()
         self.state.all_test_completed=True
         confirm_continue("是否合并 README？")
 
     @listen(run_remote_execution)
     def run_readme_merge(self):
         print("\n启动README合并智能体")
-        ReadmeMergerCrew().crew().kickoff()
+        if not confirm_skip("是否跳过README合并？"):
+            ReadmeMergerCrew().crew().kickoff()
         confirm_continue("是否提交PR")
 
     @listen(run_readme_merge)
     def github_pr(self):
         print("\n提交github pr")
-        GithubPRCrew().crew().kickoff()
+        if not confirm_skip("是否跳过提交github pr？"):
+            GithubPRCrew().crew().kickoff()
         print("已提交PR")
 
     @listen(github_pr)
@@ -99,13 +110,13 @@ class ModelWorkflowFlow(Flow[ModelWorkflowState]):
         time.sleep(60)
 
 def kickoff():
-    MODEL_LIST=["DeepSeek-R1-0528-Channel-INT8","DeepSeek-R1-0528"]
-    REMOTE_FOLDER="data/remote_folder"
+    MODEL_LIST=["Llama-3.2-3B-Instruct","Llama-3.2-3B-quantized.w8a8","Llama-3.2-3B-Instruct-FP8"]
+    REMOTE_FOLDER="/home/changrui"
     SSH_CONFIG={
-        "hostname":"127.0.0.1",
+        "hostname":"10.112.229.29",
         "port":22,
-        "user_name":"yuchangrui",
-        "password":"Ycr2wy1314"
+        "user_name":"root",
+        "password":"intel,123"
     }
     GITHUB_CONFIG={
         "token":"",

@@ -3,3 +3,4 @@ readme_merge_task:
     Receive a list of model names {model_list}, which belong to the same model series (such as Llama3 with different precisions like fp8, int4, fp16).Use the memory_retrieve tool to obtain the README content of each model from GLOBAL_MEMORY.Merge all individual READMEs into one unified, structured, and complete README document, keeping consistent descriptions while highlighting differences in precision, performance, and usage scenarios.Use the memory_store tool to save the merged final README into GLOBAL_MEMORY for subsequent tasks.
   expected_output: >
     A complete merged README document for the entire model series, with unified structure, clear comparison of different versions, and standardized format with reference to {output_example}.The merged content has been stored in GLOBAL_MEMORY for subsequent use.
+  agent: merge_readme_agent

@@ -83,6 +83,7 @@ class RemoteExecutionTool:
         It automatically handles connection, navigation to the working directory, execution, and output capture.\
         YOU (LLM) must provide the commands clearly. \
         Returns a detailed log of stdout, stderr, and exit codes."""
+        import pdb;pdb.set_trace()
         executor=RemoteGeneralExecutor(host=host,user_name=user_name,password=password,
                                        key_filename=key_filename)
         executor.connect()
@@ -93,45 +94,45 @@ class RemoteExecutionTool:
         executor.disconnect()
         return results
 
-    @tool("Extract SSH")
-    def extract_shell_commands(markdown_content:str)->List[Dict[str,str]]:
-        """Extract the relevant terminal commands from the README document."""
-        pattern = r"```(\w+)?\n(.*?)```"
-        matches=re.findall(pattern,markdown_content,re.DOTALL)
-        commands=[]
-        shell_languages=["bash","sh","shell","cmd","console","zsh"]
-        for lang,code in matches:
-            lang_lower=(lang or "").lower()
-            if lang_lower in shell_languages:
-                clean_code = re.sub(r'^[\$\>]\s*', '', code, flags=re.MULTILINE)
-                if clean_code.strip() and not clean_code.strip().startwith("#"):
-                    commands.append({
-                        "language":lang_lower,
-                        "code":clean_code.strip()
-                    })
-        return commands
+    # @tool("Extract SSH")
+    # def extract_shell_commands(markdown_content:str)->List[Dict[str,str]]:
+    #     """Extract the relevant terminal commands from the README document."""
+    #     pattern = r"```(\w+)?\n(.*?)```"
+    #     matches=re.findall(pattern,markdown_content,re.DOTALL)
+    #     commands=[]
+    #     shell_languages=["bash","sh","shell","cmd","console","zsh"]
+    #     for lang,code in matches:
+    #         lang_lower=(lang or "").lower()
+    #         if lang_lower in shell_languages:
+    #             clean_code = re.sub(r'^[\$\>]\s*', '', code, flags=re.MULTILINE)
+    #             if clean_code.strip() and not clean_code.strip().startwith("#"):
+    #                 commands.append({
+    #                     "language":lang_lower,
+    #                     "code":clean_code.strip()
+    #                 })
+    #     return commands
     
-    @tool("Build commands")
-    def build_final_commands(
-        command_templates:List[str],
-        model_id:str,
-        remote_folder:str
-    )->List[str]:
-        """
-        Input the original command list and automatically replace all variables:
-        <MODEL_ID>
-        <MODEL_ID_OR_PATH>
-        <path/to/local/dir>
-        """
-        final_commands = []
-        for cmd in command_templates:
-            # 替换所有变量
-            cmd = cmd.replace("<MODEL_ID>", model_id)
-            cmd = cmd.replace("<MODEL_ID_OR_PATH>", model_id)
-            cmd = cmd.replace("<path/to/local/dir>", remote_folder)
-            # 清理多余空格、换行（保证命令可执行）
-            cmd = " ".join(cmd.strip().split())
-            final_commands.append(cmd)
-        return final_commands
+    # @tool("Build commands")
+    # def build_final_commands(
+    #     command_templates:List[str],
+    #     model_id:str,
+    #     remote_folder:str
+    # )->List[str]:
+    #     """
+    #     Input the original command list and automatically replace all variables:
+    #     <MODEL_ID>
+    #     <MODEL_ID_OR_PATH>
+    #     <path/to/local/dir>
+    #     """
+    #     final_commands = []
+    #     for cmd in command_templates:
+    #         # 替换所有变量
+    #         cmd = cmd.replace("<MODEL_ID>", model_id)
+    #         cmd = cmd.replace("<MODEL_ID_OR_PATH>", model_id)
+    #         cmd = cmd.replace("<path/to/local/dir>", remote_folder)
+    #         # 清理多余空格、换行（保证命令可执行）
+    #         cmd = " ".join(cmd.strip().split())
+    #         final_commands.append(cmd)
+    #     return final_commands
     
 

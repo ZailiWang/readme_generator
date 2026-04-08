@@ -1,6 +1,6 @@
 from crewai import Agent,Crew,Process,Task
 from crewai.project import CrewBase,agent,crew,task
-
+from crewai.llm import LLM
 from tools.merge_content_tool import MergeContentTool
 from tools.memory_tool import MemoryTool
 from tools.chatopenai import CustomChatOpenAI
@@ -10,8 +10,11 @@ from tools.chatopenai import CustomChatOpenAI
 class ReadmeMergerCrew:
     agents_config="config/readme_merge_agents.yaml"
     tasks_config="config/readme_merge_tasks.yaml"
-    llm=CustomChatOpenAI(base_url="http://10.54.34.78:30000/v1",password="empty")
-
+    llm = LLM(
+        model="your-local-model",
+        base_url="http://10.54.34.78:30000/v1",
+        api_key="empty"
+    )
     @agent
     def merge_readme_agent(self)->Agent:
         merge_readme_tool=MergeContentTool.merge_readme

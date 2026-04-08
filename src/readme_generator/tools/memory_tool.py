@@ -24,6 +24,7 @@ class GlobalMemory:
                 self.github_config=data.get("github_config",{})
                 self.model_url_list=data.get("model_url_list",[])
                 self.model_id_list=data.get("model_id_list",[])
+                self.execution_result=data.get("execution_result",[])
                 self.reference_example=data.get("reference_example","")
                 self.merged_reference_example=data.get("merged_reference_example","")
         else:
@@ -37,6 +38,7 @@ class GlobalMemory:
             self.model_id_list:List[str]=[]
             self.reference_example:str=""
             self.merged_reference_example:str=""
+            self.execution_result:List[str]=[]
             self.save_to_file()
 
     def save_to_file(self)->bool:
@@ -51,7 +53,8 @@ class GlobalMemory:
                 "model_url_list":self.model_url_list,
                 "model_id_list":self.model_id_list,
                 "reference_example":self.reference_example,
-                "merged_reference_example":self.merged_reference_example
+                "merged_reference_example":self.merged_reference_example,
+                "execution_result":self.execution_result
             }
             with open(self.persist_path,"w",encoding="utf-8") as f:
                 json.dump(data,f,ensure_ascii=False,indent=2)
@@ -82,6 +85,8 @@ class GlobalMemory:
                 self.reference_example=value
             elif key=="merged_reference_example":
                 self.merged_reference_example=value
+            elif key=="execution_result":
+                self.execution_result=value
             self.save_to_file()
             return True
         except Exception as e:
@@ -112,6 +117,8 @@ class GlobalMemory:
                 return self.reference_example
             elif key=="merged_reference_example":
                 return self.merged_reference_example
+            elif key=="execution_result":
+                return self.execution_result
         except Exception as e:
             print(e)
             traceback.print_exc()
@@ -136,5 +143,5 @@ class MemoryTool:
     @tool("Get Memory Key")
     def get_memory_key():
         """Used to enable agents in CrewAI to accurately obtain all stored data key values in the global memory (GLOBAL_MEMORY). Its core function is to provide agents with clear guidance on memory key names, ensuring that subsequent data retrieval and storage operations can accurately locate the target keys. It avoids data operation failures caused by incorrect key names, guarantees the accuracy and efficiency of the interaction between agents and global memory, and supports the smooth connection of data reading and writing in the task flow."""
-        return ["model_list","merged_readme","model_readme","remote_folder","ssh_config","github_config","model_url_list","model_id_list","reference_example","merged_reference_example"]
+        return ["model_list","merged_readme","model_readme","remote_folder","ssh_config","github_config","model_url_list","model_id_list","reference_example","merged_reference_example","execution_result"]
     
