@@ -185,7 +185,7 @@ def kickoff():
         "password":"$harktank2Go"
     }
     GITHUB_CONFIG={
-        "github_token":"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",
+        "github_token":"",
         "repo_owner":"YuChangrui578",
         "repo_name":"readme_example",
         "base_branch":"main",
