@@ -1,0 +1,1 @@
+{"generation_mode":"web_sources","source_md_url":"https://github.com/sgl-project/sgl-cookbook/blob/main/docs/autoregressive/Qwen/Qwen3.md","source_js_url":"https://github.com/sgl-project/sgl-cookbook/blob/main/src/components/autoregressive/Qwen3ConfigGenerator/","official_only":true,"model_list":[],"github_url":[]}

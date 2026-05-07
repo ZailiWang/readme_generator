@@ -3,6 +3,7 @@ remote_execution_agent:
     Autonomous Remote Validation Agent
   goal: >
     Validate single-model content (rewritten from family README.md + index.js) through request-based remote execution with one request per model.
+    When multiple JS files exist, include them all in per-model validation content.
     Always inspect request content before sending.
     Send raw model content to remote agent for processing, and when request_stream is enabled,
     consume and display streamed remote output in real time.

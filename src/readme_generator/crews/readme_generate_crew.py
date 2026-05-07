@@ -34,9 +34,7 @@ class ReadmeGeneratorCrew:
         return Agent(
             config=self.agents_config["readme_generator_agent"],
             tools=[
-                GenerateReadmeTool.memory_retrieve_generation_context,
-                GenerateReadmeTool.memory_store_family_artifacts,
-                GenerateReadmeTool.memory_store_family_content,
+                GenerateReadmeTool.memory_generate_and_store_family_artifacts,
             ],
             llm=self.llm,
             verbose=True,

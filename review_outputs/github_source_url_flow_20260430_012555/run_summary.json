@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "error": "",
+  "output_dir": "/home/changrui/readme_generator/review_outputs/github_source_url_flow_20260430_012555",
+  "went_through_input_parser": true,
+  "generation_mode": "web_sources",
+  "source_md_url": "https://github.com/sgl-project/sgl-cookbook/blob/main/docs/autoregressive/Qwen/Qwen3.md",
+  "source_js_url": "https://github.com/sgl-project/sgl-cookbook/blob/main/src/components/autoregressive/Qwen3ConfigGenerator/",
+  "source_md_files_count": 1,
+  "source_js_files_count": 1,
+  "model_list_count": 7,
+  "model_id_list_count": 31,
+  "family_md_len": 0,
+  "family_index_js_len": 0,
+  "contains_intel_cpu_keyword": false
+}

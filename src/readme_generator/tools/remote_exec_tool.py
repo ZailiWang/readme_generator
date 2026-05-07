@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 from crewai.tools import tool
+from .common_utils import is_url_source_mode, normalize_list
 
 
 class RemoteExecutionClient:
@@ -120,25 +121,14 @@ class RemoteExecutionClient:
                 reconstructed.append(data)
         return {"events": events, "text": "".join(reconstructed).strip()}
 
-    def validate_model_readme(
+    def validate_payload(
         self,
         request_url: str,
-        model_id: str,
-        content: str,
-        extra_payload: Optional[Dict[str, Any]] = None,
+        payload: Dict[str, Any],
         stream: bool = True,
-        include_extracted_commands: bool = False,
     ) -> Dict[str, Any]:
-        payload = {
-            "model_id": model_id,
-            "content": content,
-        }
-        if include_extracted_commands:
-            payload["commands"] = self.extract_commands_from_readme(content)
-        if extra_payload:
-            payload.update(extra_payload)
-
         try:
+            import pdb; pdb.set_trace()
             if stream:
                 response = requests.post(
                     request_url,
@@ -204,24 +194,29 @@ class RemoteExecutionClient:
                 "used_stream": stream,
             }
 
+    def validate_model_readme(
+        self,
+        request_url: str,
+        model_id: str,
+        content: str,
+        extra_payload: Optional[Dict[str, Any]] = None,
+        stream: bool = True,
+        include_extracted_commands: bool = False,
+    ) -> Dict[str, Any]:
+        payload = {
+            "model_id": model_id,
+            "content": content,
+        }
+        if include_extracted_commands:
+            payload["commands"] = self.extract_commands_from_readme(content)
+        if extra_payload:
+            payload.update(extra_payload)
+        return self.validate_payload(request_url=request_url, payload=payload, stream=stream)
+
 
 class RemoteExecutionTool:
     client = RemoteExecutionClient()
     global_memory = None
-
-    @staticmethod
-    def _normalize_list(value: Any) -> List[str]:
-        if isinstance(value, list):
-            return [str(v) if v is not None else "" for v in value]
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value)
-                if isinstance(parsed, list):
-                    return [str(v) if v is not None else "" for v in parsed]
-            except Exception:
-                pass
-            return [value]
-        return []
 
     @staticmethod
     def _compose_model_content_from_family(
@@ -231,6 +226,7 @@ class RemoteExecutionTool:
         github_url: str,
         family_md: str,
         family_index_js: str,
+        family_js_files: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
         branch_mode = "dev_branch" if str(github_url or "").strip() else "official"
         model_header = (model_id or model_name or "").strip()
@@ -239,7 +235,20 @@ class RemoteExecutionTool:
         family_md = (family_md or "").strip()
         family_index_js = (family_index_js or "").strip()
 
-        if not family_md or not family_index_js:
+        if not family_md:
+            return ""
+        js_sections: List[str] = []
+        js_files = family_js_files or []
+        if js_files:
+            for item in js_files:
+                if not isinstance(item, dict):
+                    continue
+                path = str(item.get("path") or "index.js")
+                content = str(item.get("content") or "")
+                js_sections.append(f"### {path}\n```javascript\n{content}\n```")
+        elif family_index_js:
+            js_sections.append(f"### index.js\n```javascript\n{family_index_js}\n```")
+        if not js_sections:
             return ""
 
         return (
@@ -255,33 +264,45 @@ class RemoteExecutionTool:
             "## Family README.md (full)\n\n"
             f"{family_md}\n\n"
             "## Family index.js (full)\n\n"
-            "```javascript\n"
-            f"{family_index_js}\n"
-            "```"
+            f"{chr(10).join(js_sections)}"
         ).strip()
 
     @staticmethod
     def _resolve_model_content_list() -> Dict[str, Any]:
-        model_list = RemoteExecutionTool._normalize_list(
+        model_list = normalize_list(
             RemoteExecutionTool.global_memory.memory_retrieve("model_list") or []
+            ,
+            fallback_single_str=True,
+            stringify_items=True,
         )
-        model_id_list = RemoteExecutionTool._normalize_list(
+        model_id_list = normalize_list(
             RemoteExecutionTool.global_memory.memory_retrieve("model_id_list") or []
+            ,
+            fallback_single_str=True,
+            stringify_items=True,
         )
-        model_url_list = RemoteExecutionTool._normalize_list(
+        model_url_list = normalize_list(
             RemoteExecutionTool.global_memory.memory_retrieve("model_url_list") or []
+            ,
+            fallback_single_str=True,
+            stringify_items=True,
         )
-        github_url_list = RemoteExecutionTool._normalize_list(
+        github_url_list = normalize_list(
             RemoteExecutionTool.global_memory.memory_retrieve("github_url") or []
+            ,
+            fallback_single_str=True,
+            stringify_items=True,
         )
         family_md = str(
             RemoteExecutionTool.global_memory.memory_retrieve("family_md") or ""
         ).strip()
         family_index_js = str(RemoteExecutionTool.global_memory.memory_retrieve("family_index_js") or "").strip()
+        family_js_files_raw = RemoteExecutionTool.global_memory.memory_retrieve("family_js_files") or []
+        family_js_files = family_js_files_raw if isinstance(family_js_files_raw, list) else []
         if not family_md:
             raise ValueError("family_md is required for remote execution.")
-        if not family_index_js:
-            raise ValueError("family_index_js is required for remote execution.")
+        if not family_index_js and not family_js_files:
+            raise ValueError("family_index_js/family_js_files is required for remote execution.")
         if not model_id_list:
             raise ValueError("model_id_list is required for remote execution.")
 
@@ -295,6 +316,7 @@ class RemoteExecutionTool:
                     github_url=github_url_list[i] if i < len(github_url_list) else "",
                     family_md=family_md,
                     family_index_js=family_index_js,
+                    family_js_files=family_js_files,
                 )
             )
         return {
@@ -317,20 +339,51 @@ class RemoteExecutionTool:
         scheme = ssh_config.get("request_scheme", "http")
         port = ssh_config.get("request_port", 8000)
         request_stream = bool(ssh_config.get("request_stream", False))
-        default_endpoint = "/bkc_test/stream" if request_stream else "/bkc_test"
+        mode = RemoteExecutionTool._normalized_remote_mode()
+        base_endpoint = "/url_source_test" if mode == "url_source" else "/legacy_test"
+        default_endpoint = f"{base_endpoint}/stream" if request_stream else base_endpoint
         endpoint = ssh_config.get("request_endpoint", default_endpoint)
         return f"{scheme}://{host}:{port}{endpoint}"
 
     @staticmethod
     def _build_execution_context() -> Dict[str, Any]:
-        resolved_content = RemoteExecutionTool._resolve_model_content_list()
+        mode = RemoteExecutionTool._normalized_remote_mode()
+        if mode == "url_source":
+            resolved_content = {"model_content_list": [], "warning": ""}
+        else:
+            resolved_content = RemoteExecutionTool._resolve_model_content_list()
+        remote_payload = RemoteExecutionTool.global_memory.memory_retrieve("remote_payload") or {}
+        if not isinstance(remote_payload, dict):
+            remote_payload = {}
+        if mode == "url_source":
+            memory_model_list = normalize_list(
+                RemoteExecutionTool.global_memory.memory_retrieve("model_list") or [],
+                fallback_single_str=True,
+                stringify_items=True,
+            )
+            model_list = normalize_list(
+                memory_model_list or remote_payload.get("model_list") or [],
+                fallback_single_str=True,
+                stringify_items=True,
+            )
+            remote_payload = {
+                "generation_mode": "url_source",
+                "model_list": model_list,
+                "source_urls": remote_payload.get("source_urls") or {
+                    "md": RemoteExecutionTool.global_memory.memory_retrieve("source_md_url") or "",
+                    "js": RemoteExecutionTool.global_memory.memory_retrieve("source_js_url") or "",
+                },
+                "metadata": remote_payload.get("metadata") or {"official_only": True},
+            }
         return {
+            "generation_mode": mode,
             "model_list": RemoteExecutionTool.global_memory.memory_retrieve("model_list") or [],
             "model_id_list": RemoteExecutionTool.global_memory.memory_retrieve("model_id_list") or [],
             "model_url_list": RemoteExecutionTool.global_memory.memory_retrieve("model_url_list") or [],
             "github_url": RemoteExecutionTool.global_memory.memory_retrieve("github_url") or [],
             "family_md": RemoteExecutionTool.global_memory.memory_retrieve("family_md") or "",
             "family_index_js": RemoteExecutionTool.global_memory.memory_retrieve("family_index_js") or "",
+            "family_js_files": RemoteExecutionTool.global_memory.memory_retrieve("family_js_files") or [],
             "family_content": RemoteExecutionTool.global_memory.memory_retrieve("family_content") or "",
             "model_content_list": resolved_content["model_content_list"],
             "content_resolution_warning": resolved_content["warning"],
@@ -338,6 +391,36 @@ class RemoteExecutionTool:
             "executed_command": RemoteExecutionTool.global_memory.memory_retrieve("executed_command") or [],
             "fail_reason_list": RemoteExecutionTool.global_memory.memory_retrieve("fail_reason_list") or [],
             "ssh_config": RemoteExecutionTool.global_memory.memory_retrieve("ssh_config") or {},
+            "remote_payload": remote_payload,
+        }
+
+    @staticmethod
+    def _resolve_legacy_content(remote_payload: Dict[str, Any]) -> Dict[str, str]:
+        family_md = str(RemoteExecutionTool.global_memory.memory_retrieve("family_md") or "")
+        family_index_js = str(RemoteExecutionTool.global_memory.memory_retrieve("family_index_js") or "")
+        if family_md.strip() and family_index_js.strip():
+            return {
+                "family_md": family_md,
+                "family_index_js": family_index_js,
+                "input_text": str(RemoteExecutionTool.global_memory.memory_retrieve("input_text") or ""),
+            }
+        content = remote_payload.get("content")
+        if isinstance(content, dict):
+            ref_md = str(content.get("family_md") or content.get("ref_md") or "")
+            ref_index_js = str(content.get("family_index_js") or content.get("ref_index_js") or "")
+            input_text = str(content.get("input_text") or "")
+            if ref_md and ref_index_js:
+                return {
+                    "family_md": ref_md,
+                    "family_index_js": ref_index_js,
+                    "input_text": input_text,
+                }
+        return {
+            "family_md": str(RemoteExecutionTool.global_memory.memory_retrieve("family_md") or "")
+            or str(RemoteExecutionTool.global_memory.memory_retrieve("ref_md") or ""),
+            "family_index_js": str(RemoteExecutionTool.global_memory.memory_retrieve("family_index_js") or "")
+            or str(RemoteExecutionTool.global_memory.memory_retrieve("ref_index_js") or ""),
+            "input_text": str(RemoteExecutionTool.global_memory.memory_retrieve("input_text") or ""),
         }
 
     @tool("memory_retrieve_execution_context")
@@ -351,6 +434,14 @@ class RemoteExecutionTool:
         """Preview per-model content that will be sent to remote API before execution.
         Returns model-level summaries including content length and truncated preview."""
         context = RemoteExecutionTool._build_execution_context()
+        if context.get("generation_mode") == "url_source":
+            payload = context.get("remote_payload") or {}
+            return {
+                "count": len(payload.get("model_list") or []),
+                "content_resolution_warning": "",
+                "items": [],
+                "payload_preview": payload,
+            }
         model_ids = context.get("model_id_list") or []
         model_contents = context.get("model_content_list") or []
         preview_items: List[Dict[str, Any]] = []
@@ -382,13 +473,54 @@ class RemoteExecutionTool:
         extra_payload = ssh_config.get("request_payload", {})
         request_stream = bool(ssh_config.get("request_stream", False))
         include_extracted_commands = bool(ssh_config.get("include_extracted_commands", False))
-        return RemoteExecutionTool.client.validate_model_readme(
+        mode = RemoteExecutionTool._normalized_remote_mode()
+        remote_payload = RemoteExecutionTool.global_memory.memory_retrieve("remote_payload") or {}
+        if not isinstance(remote_payload, dict):
+            remote_payload = {}
+        if mode == "url_source":
+            memory_model_list = normalize_list(
+                RemoteExecutionTool.global_memory.memory_retrieve("model_list") or [],
+                fallback_single_str=True,
+                stringify_items=True,
+            )
+            payload = {
+                "generation_mode": "url_source",
+                "model_list": normalize_list(
+                    memory_model_list or remote_payload.get("model_list") or [],
+                    fallback_single_str=True,
+                    stringify_items=True,
+                ),
+                "source_urls": remote_payload.get("source_urls") or {
+                    "md": RemoteExecutionTool.global_memory.memory_retrieve("source_md_url") or "",
+                    "js": RemoteExecutionTool.global_memory.memory_retrieve("source_js_url") or "",
+                },
+                "metadata": remote_payload.get("metadata") or {"official_only": True},
+            }
+            if isinstance(extra_payload, dict) and extra_payload:
+                payload.update(extra_payload)
+            return RemoteExecutionTool.client.validate_payload(
+                request_url=request_url,
+                payload=payload,
+                stream=request_stream,
+            )
+        legacy_payload = {
+            "generation_mode": "legacy",
+            "content": RemoteExecutionTool._resolve_legacy_content(remote_payload),
+            "model_list": (RemoteExecutionTool.global_memory.memory_retrieve("model_list") or []) or remote_payload.get("model_list") or [],
+            "github_url": remote_payload.get("github_url") or (RemoteExecutionTool.global_memory.memory_retrieve("github_url") or []),
+            "metadata": remote_payload.get("metadata") or {"official": [], "dev": []},
+            # keep per-model fields for current remote loop compatibility
+            "model_id": model_id,
+            "content_single_model": model_content,
+        }
+        if include_extracted_commands:
+            legacy_payload["commands"] = RemoteExecutionTool.client.extract_commands_from_readme(model_content)
+        if isinstance(extra_payload, dict) and extra_payload:
+            legacy_payload.update(extra_payload)
+        return RemoteExecutionTool.client.validate_payload(
             request_url=request_url,
-            model_id=model_id,
-            content=model_content,
-            extra_payload=extra_payload,
+            payload=legacy_payload,
             stream=request_stream,
-            include_extracted_commands=include_extracted_commands,
         )
 
     @tool("memory_store_execution_result")
@@ -415,3 +547,14 @@ class RemoteExecutionTool:
         update_list("execution_result", stored_result)
         update_list("fail_reason_list", fail_reason)
         return True
+    @staticmethod
+    def _normalized_remote_mode() -> str:
+        remote_payload = RemoteExecutionTool.global_memory.memory_retrieve("remote_payload") or {}
+        mode = ""
+        if isinstance(remote_payload, dict):
+            mode = str(remote_payload.get("generation_mode") or "").strip().lower()
+        if not mode:
+            mode = str(RemoteExecutionTool.global_memory.memory_retrieve("generation_mode") or "").strip().lower()
+        if is_url_source_mode(mode):
+            return "url_source"
+        return "legacy"

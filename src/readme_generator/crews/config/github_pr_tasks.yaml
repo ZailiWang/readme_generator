@@ -2,12 +2,14 @@ github_pr_task:
   description: >
     Retrieve publish context from memory and publish artifacts to GitHub.
     Support:
-    1) legacy path/md_path + js_path mode (family README.md + family index.js)
-    2) folder path mode (e.g. Xeon/Llama/ => auto publish README.md + index.js in that folder)
+    1) legacy path/md_path + js_path mode (family README.md + family index.js).
+       If review_failure_report exists, also publish remote_test_review.md in the same folder.
+       If family_js_files exists, publish all js files in that folder.
+    2) folder path mode (e.g. Xeon/Llama/ => auto publish README.md + index.js, and remote_test_review.md when available)
     3) multi-file mode using github_config.publish_items/files/upload_files
        where each item can target different folders/files.
     Validate github config, ensure target branch exists, upsert all files, and create or update PR.
-    Use publish_family_artifacts to perform upload and PR operations.
+    Call publish_family_artifacts exactly once per run to upload all target files atomically into the same branch/PR.
     Persist PR info to GLOBAL_MEMORY.
   expected_output: >
     A publish result containing PR status/URL/number and uploaded file commit SHAs.

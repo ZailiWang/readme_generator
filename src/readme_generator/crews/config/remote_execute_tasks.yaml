@@ -1,10 +1,13 @@
 adaptive_remote_validation_task:
   description: >
-    Retrieve model_id_list/family_md/family_index_js/request config from memory and validate command correctness on remote local-bkc service.
-    Rewrite per-model request content from canonical family artifacts (README.md + index.js) while preserving full family context.
+    Retrieve generation_mode/remote_payload plus validation context from memory and validate command correctness on remote local-bkc service.
+    Use one unified execution flow with internal branching:
+    - legacy mode: rewrite per-model request content from canonical family artifacts (README.md + index.js).
+    - url_source mode: send unified payload containing generation_mode=url_source, model_list, source_urls, and metadata.
+    If family_js_files contains multiple files, include all JS files in each model-level request content.
     Before sending requests, call memory_preview_remote_content to inspect exactly what content will be sent for each model.
-    Ensure each request content only contains single-model information (filtered by model_id/model_name), not merged multi-model sections.
-    Enforce one request per model content; continue processing all models even if some fail.
+    In legacy mode, ensure each request content only contains single-model information (filtered by model_id/model_name), not merged multi-model sections.
+    Continue processing all models even if some fail.
     Persist per-index validation trace using memory_store_execution_result:
     - executed_command
     - execution_result

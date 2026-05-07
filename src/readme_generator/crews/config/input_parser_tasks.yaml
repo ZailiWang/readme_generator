@@ -1,12 +1,23 @@
 input_parse_task:
   description: >
-    Complete input parsing and memory storage in strict sequence:
+    Complete input parsing and memory storage in one unified flow (single input/output path) with internal branching:
     Call get_input_text to obtain input_text from GLOBAL_MEMORY.
-    Execute parse_input_text to process input_text and output two structured results: model_list and github_url (both as lists).
+    Execute parse_input_text with dual-mode handling:
+    1) Legacy mode: input_text contains model_list + github_url.
+    2) URL-source mode: input_text contains source_md_url + source_js_url (GitHub/web). In this mode, github_url must be [] (official sglang only).
+    In URL-source mode, call infer_model_list_from_source_context to infer model_list from source md/js content + input_text hints before writing memory.
+    This inference should be LLM-first and must handle md/index.js split patterns (e.g., family in md + size label in js).
+    Parse output should include model_list/github_url and mode/source fields when present.
+    Keep generation_mode normalized for downstream usage:
+    - legacy => generation_mode=reference (internal)
+    - url_source => generation_mode=web_sources (internal)
     Enforce github_url alignment with model_list length:
     - If github_url is shorter, pad with empty strings "" for official-sglang models.
     - If only one github_url is provided for a mixed official/dev series, place it on the last model and fill previous with "".
     Invoke store_memory to save the parsed model_list and github_url into GLOBAL_MEMORY.
+    Also refresh remote_payload in GLOBAL_MEMORY using unified schema:
+    - legacy: {generation_mode:"legacy", content:{family_md,family_index_js,input_text}, model_list, github_url, metadata:{official,dev}}
+    - url_source: {generation_mode:"url_source", model_list, source_urls:{md,js}, metadata:{official_only:true}}
     Verify data standardization: ensure both fields are valid lists with proper default values if empty.
     The final GLOBAL_MEMORY shall contain:
     model_list (parsed list of model information)
@@ -14,7 +25,8 @@ input_parse_task:
   expected_output: >
     Global memory updated with parsed structured data:
     input_text successfully fetched from GLOBAL_MEMORY
-    model_list generated and stored
-    github_url generated and stored
+    model_list parsed/stored (URL-source mode should infer and store model_list when source content provides candidates)
+    github_url parsed/stored (empty list for URL-source mode)
+    source_md_url/source_js_url stored when URL-source mode is used
     All parsed data is standardized and ready for downstream agent tasks.
   agent: input_parser_agent

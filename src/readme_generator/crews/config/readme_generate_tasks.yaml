@@ -1,10 +1,34 @@
 adaptive_readme_generation_task:
   description: >
     Generate aligned family README.md + index.js using agent-native reasoning as the primary generation engine.
-    Retrieve full generation context from memory, including ref_md, ref_index_js, model_list, and model_id_list.
+    You MUST call memory_generate_and_store_family_artifacts immediately.
+    Do NOT ask the user for Generation Context, because all required context is already in GLOBAL_MEMORY.
+    First call memory_generate_and_store_family_artifacts to guarantee family_md/family_index_js are generated from
+    family_md/family_index_js (or legacy ref_md/ref_index_js) + model_list/model_id_list and persisted to GLOBAL_MEMORY.
+    This step also compacts redundant memory lists (for example duplicate model_list entries and misaligned github_url length).
+    This is one unified generation flow with internal branching by mode, not separate flows.
+    Retrieve full generation context from memory, including generation_mode, remote_payload,
+    github_md_folder_url, github_js_folder_url, family_md/family_index_js, model_list, and model_id_list.
     Keep generation aligned to the model family context and ensure JS logic is fully handled (not markdown-only reasoning).
     Do not copy the reference content blindly. The output must align to the current input models.
-    Store outputs with memory_store_family_artifacts(family_md, family_index_js), then ensure family_content is present.
+    Branching rules:
+    1) legacy/reference mode:
+    - Use family_md/family_index_js as template references (fallback to legacy ref_md/ref_index_js) and adapt to current model_list/model_id_list.
+    - Preserve official/dev distinctions implied by github_url/remote_payload metadata.
+    2) url_source mode (generation_mode in web_sources/github_folders/url_source):
+    - Treat source/ref artifacts as upstream official cookbook context.
+    - Keep official structure/style, and add Intel CPU content in the same structure.
+    - Do not inject dev-branch-only behavior.
+    For url_source mode, generate Intel CPU content that coexists in the same structure:
+    - Preserve existing CUDA/AMD sections and conventions.
+    - Add Intel CPU as a first-class parallel option in text, tables, command examples, and index.js selectors.
+    - Add Intel CPU specific parameters when needed (for example CPU device selection, quantization flags, TP/NUMA hints).
+    - Keep naming/style aligned with existing source files.
+    If you further refine content after the first generation call:
+    - If source_js_files contains multiple files, store with memory_store_family_multi_artifacts(family_md, family_js_files_json).
+    - Otherwise store with memory_store_family_artifacts(family_md, family_index_js).
+    Then ensure family_content is present.
   expected_output: >
     GLOBAL_MEMORY contains aligned family_md, family_index_js, and family_content.
+    Return a concise execution summary based on the tool result, without asking for additional user input.
   agent: readme_generator_agent

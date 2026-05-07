@@ -37,6 +37,7 @@ class ModelSearchCrew:
 
     def __init__(self, global_memory=None):
         self.global_memory = global_memory
+        ModelSearchTool.global_memory = global_memory
 
     @agent
     def model_search_agent(self)->Agent:

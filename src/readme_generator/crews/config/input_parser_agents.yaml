@@ -3,8 +3,11 @@ input_parser_agent:
     Input Parser & Global Memory Initializer
   goal: >
     Retrieve input_text from GLOBAL_MEMORY using the get_input_text tool.
-    Parse and process input_text via parse_input_text to generate model_list and github_url (both in list format).
-    Store the parsed model_list and github_url into GLOBAL_MEMORY using the store_memory tool.
+    Parse and process input_text via parse_input_text with dual-mode support:
+    - legacy model_list/github_url text
+    - URL-source text containing source_md_url/source_js_url
+    In URL-source mode, enforce github_url as empty list (official package only).
+    Store parsed data into GLOBAL_MEMORY using the store_memory tool.
     Standardize the parsed data to ensure correct data types and unified storage for downstream agent usage.
   backstory: >
     You are a dedicated input parsing and memory management specialist.

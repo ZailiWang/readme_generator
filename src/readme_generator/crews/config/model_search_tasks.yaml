@@ -1,6 +1,17 @@
 model_search_task:
   description: >
-    Use the memory_retrieve tool to get model_list from GLOBAL_MEMORY. Use the huggingface_model_batch_search tool to perform accurate batch retrieval for all models in model_list, obtain the official Hugging Face model_id and URL for each model, and form model_id_list and model_url_list. Finally, use the memory_store tool to store the two lists into GLOBAL_MEMORY to ensure the data is available for subsequent tasks.
+    Use the memory_retrieve tool to get model_list from GLOBAL_MEMORY.
+    model_list must come from input_parser stage (including URL-source md/js + label fusion inference).
+    If model_list is empty, stop and report error instead of re-inferring in model_search.
+    Before searching, deduplicate model_list by normalized query key only to avoid exact duplicates,
+    but keep distinct variants (e.g., Instruct / FP8 / AWQ / Thinking) as separate search intents.
+    Then use huggingface_model_batch_search tool to perform retrieval on Hugging Face with mode-specific behavior:
+    - url_source mode: expand each base model into practical variants when available, including Base / Instruct / Thinking / FP8 / AWQ / Quantized forms.
+    - legacy mode: keep strict one-to-one mapping between input model_list and returned model_id_list/model_url_list.
+    Use the returned model_list/model_id_list/model_url_list while preserving intended alignment.
+    Finally, use memory_store_model_search_results to store model_list, model_id_list, and model_url_list into GLOBAL_MEMORY.
   expected_output: >
-    Complete and valid model_id_list and model_url_list, all data has been retrieved officially from Hugging Face, correctly matched with model_list, and persisted in GLOBAL_MEMORY for use by readme_generator_agent and other downstream agents.
+    Mode-aware search results persisted in GLOBAL_MEMORY:
+    - url_source: expanded variant set
+    - legacy: one-to-one aligned mapping
   agent: model_search_agent

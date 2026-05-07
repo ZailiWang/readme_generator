@@ -1,0 +1,17 @@
+refine_after_remote_task:
+  description: >
+    Retrieve post-remote context first. The context includes rows (per-model pass/fail), family_md, and family_index_js.
+    Rewrite family_md and family_index_js to remove all failed models from:
+    - model tables
+    - model-id mappings
+    - launch/config options
+    - command examples that are variant-specific
+    If multiple JS files are present, rewrite each JS file one-by-one and output a JSON list:
+    [{"path":"...", "content":"..."}]
+    Keep the original writing style and section structure as much as possible.
+    Then generate review_failure_report markdown containing failed model names/ids and failure reasons for manual review.
+    Finally call memory_store_refined_family_artifacts(family_md, family_index_js, review_failure_report, family_js_files_json).
+  expected_output: >
+    GLOBAL_MEMORY contains refined family_md/family_index_js/family_content that only include passed models,
+    and review_failure_report with detailed failure diagnostics.
+  agent: post_remote_refine_agent

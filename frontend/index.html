@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>README Generator Frontend</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui; margin: 0; background: #0b1020; color: #e6e8ef; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .card { background: #121934; border: 1px solid #26345f; border-radius: 10px; padding: 12px; margin-top: 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; margin: 6px 0; font-size: 12px; color: #aeb7d3; }
+    input, textarea { width: 100%; box-sizing: border-box; background: #0c1330; color: #e6e8ef; border: 1px solid #33457c; border-radius: 8px; padding: 8px; }
+    textarea { min-height: 90px; resize: vertical; }
+    button { background: #3f6cff; color: #fff; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; margin-right: 8px; }
+    .log { height: 46vh; overflow: auto; white-space: pre-wrap; background: #0a1028; border: 1px solid #33457c; border-radius: 8px; padding: 10px; line-height: 1.45; }
+    .muted { color: #9aa6cf; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>README Generator Frontend (Decoupled)</h2>
+    <div class="muted">这是独立前端页面，可部署在任意静态服务器，通过 CORS 调用后端 API。</div>
+
+    <div class="card">
+      <label>Backend Base URL</label>
+      <input id="backend_base" value="http://127.0.0.1:8000" />
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <label>generation_mode ("reference" | "github_folders")</label>
+        <input id="generation_mode" value="reference" />
+        <label>github_md_folder_url (for github_folders)</label>
+        <input id="github_md_folder_url" value="" />
+        <label>github_js_folder_url (for github_folders)</label>
+        <input id="github_js_folder_url" value="" />
+        <label>source_md_url (generic web source)</label>
+        <input id="source_md_url" value="" />
+        <label>source_js_url (generic web source)</label>
+        <input id="source_js_url" value="" />
+        <label>input_text</label>
+        <textarea id="input_text"></textarea>
+        <label>model_list (JSON array)</label>
+        <textarea id="model_list">["Llama-3.2-3B-quantized.w8a8","Llama-3.2-3B-Instruct-FP8","Llama-3.2-3B-Instruct-AWQ"]</textarea>
+        <label>github_url (JSON array)</label>
+        <textarea id="github_url">["","","https://github.com/jianan-gu/sglang/tree/cpu_optimized"]</textarea>
+        <label>remote_folder</label>
+        <input id="remote_folder" value="/home/sdp/changrui" />
+        <label>skip_stages (JSON array)</label>
+        <input id="skip_stages" value="[]" />
+        <label>stages (JSON array)</label>
+        <input id="stages" value="[]" />
+      </div>
+      <div class="card">
+        <label>ssh_config (JSON)</label>
+        <textarea id="ssh_config">{"hostname":"10.165.58.104","port":22,"user_name":"sdp","password":"***"}</textarea>
+        <label>github_config (JSON)</label>
+        <textarea id="github_config">{"repo_owner":"YuChangrui578","repo_name":"readme_example","base_branch":"main","head_branch":"dev","pr_title":"test","pr_description":"test_github_pr","commit_message":"test","path":"Xeon/Llama/"}</textarea>
+        <label>reference_folder</label>
+        <input id="reference_folder" value="" />
+        <label>family_md (legacy alias: ref_md)</label>
+        <textarea id="family_md"></textarea>
+        <label>family_index_js (legacy alias: ref_index_js)</label>
+        <textarea id="family_index_js"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <button id="runBtn">Run Stream</button>
+      <button id="clearBtn">Clear</button>
+      <div id="log" class="log" style="margin-top: 10px"></div>
+    </div>
+  </div>
+
+  <script>
+    const runBtn = document.getElementById("runBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const logEl = document.getElementById("log");
+
+    const append = (s) => {
+      logEl.textContent += s + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    };
+
+    const parseJSON = (id, fallback) => {
+      const text = document.getElementById(id).value.trim();
+      if (!text) return fallback;
+      return JSON.parse(text);
+    };
+
+    const payload = () => ({
+      generation_mode: document.getElementById("generation_mode").value || "reference",
+      github_md_folder_url: document.getElementById("github_md_folder_url").value || "",
+      github_js_folder_url: document.getElementById("github_js_folder_url").value || "",
+      source_md_url: document.getElementById("source_md_url").value || "",
+      source_js_url: document.getElementById("source_js_url").value || "",
+      input_text: document.getElementById("input_text").value || "",
+      model_list: parseJSON("model_list", []),
+      github_url: parseJSON("github_url", []),
+      skip_stages: parseJSON("skip_stages", []),
+      remote_folder: document.getElementById("remote_folder").value || "",
+      ssh_config: parseJSON("ssh_config", {}),
+      github_config: parseJSON("github_config", {}),
+      family_md: document.getElementById("family_md").value || "",
+      family_index_js: document.getElementById("family_index_js").value || "",
+      reference_folder: document.getElementById("reference_folder").value || null,
+      stages: parseJSON("stages", []),
+    });
+
+    async function runStream() {
+      runBtn.disabled = true;
+      append("=== workflow start ===");
+      const backend = document.getElementById("backend_base").value.trim().replace(/\/+$/, "");
+      let response;
+      try {
+        response = await fetch(`${backend}/api/run/stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+          body: JSON.stringify(payload()),
+        });
+      } catch (e) {
+        append("request error: " + e.message);
+        runBtn.disabled = false;
+        return;
+      }
+      if (!response.ok || !response.body) {
+        append("http error: " + response.status);
+        runBtn.disabled = false;
+        return;
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop();
+        for (const block of blocks) {
+          const lines = block.split("\n");
+          let event = "message";
+          let data = "";
+          for (const line of lines) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            if (line.startsWith("data:")) data += line.slice(5).trim();
+          }
+          if (!data) continue;
+          let parsed;
+          try { parsed = JSON.parse(data); } catch { parsed = { raw: data }; }
+
+          if (event === "workflow_started") append("stages: " + (parsed.stages || []).join(" -> "));
+          else if (event === "stage_started") append(`\n--- [${parsed.stage}] started ---`);
+          else if (event === "stage_completed") {
+            append(`[${parsed.stage}] completed`);
+            if (parsed.cot) append(parsed.cot);
+          } else if (event === "completed") append("\n=== workflow completed ===");
+          else if (event === "error") append("ERROR: " + (parsed.error || data));
+          else if (event === "done") append("=== stream done ===");
+          else append(`[${event}] ` + JSON.stringify(parsed));
+        }
+      }
+      runBtn.disabled = false;
+    }
+
+    runBtn.onclick = runStream;
+    clearBtn.onclick = () => { logEl.textContent = ""; };
+  </script>
+</body>
+</html>

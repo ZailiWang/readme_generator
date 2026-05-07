@@ -1,7 +1,4 @@
 import openai
-import copy
-from openai import OpenAI,AsyncOpenAI
-import traceback
 
 class LLM_Callable:
     def __init__(self,base_url,api_key,model_name):
@@ -21,10 +18,10 @@ class LLM_Callable:
                     {"role":"user","content":inputs}
                 ]
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            return content if content is not None else ""
         except Exception as e:
-            print(e)
-            traceback.print_exc()
-            return ""
-
+            # Do not swallow connection/proxy/model errors.
+            # Callers decide fallback strategy and can expose precise error cause.
+            raise RuntimeError(f"LLM invoke failed: {type(e).__name__}: {e}") from e
 

@@ -30,6 +30,7 @@ class InputParserCrew:
 
     def __init__(self, global_memory=None):
         self.global_memory = global_memory
+        InputParseTool.global_memory = global_memory
 
     @agent
     def input_parser_agent(self)->Agent:
@@ -38,6 +39,7 @@ class InputParserCrew:
         # memory_get_value_type_tool=InputParseTool.memory_get_type
         ipnut_parse_text_tool=InputParseTool.parse_input_text
         get_input_text_tool=InputParseTool.get_input_text
+        infer_model_list_tool=InputParseTool.infer_model_list_from_source_context
         # set_github_config_tool=InputParseTool.set_github_config_to_memory
         # set_ssh_config_tool=InputParseTool.set_ssh_config_to_memory
         # set_remote_folder_tool=InputParseTool.set_remote_folder_to_memory
@@ -46,7 +48,7 @@ class InputParserCrew:
 
         return Agent(
             config=self.agents_config["input_parser_agent"],
-            tools=[ipnut_parse_text_tool,memory_store_tool,get_input_text_tool],
+            tools=[ipnut_parse_text_tool,memory_store_tool,get_input_text_tool,infer_model_list_tool],
             llm=self.llm,
             verbose=True,
             allow_delegation=True,
