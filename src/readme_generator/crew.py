@@ -633,6 +633,7 @@ class ReadmeWorkflowCrew(Flow[WorkflowState]):
             final_output = self._build_readme_generation_output(
                 json.dumps(tool_result, ensure_ascii=False)
             )
+            self._print_readme_generation_terminal_output()
             print(f"=== Finished stage: {stage_name} ===")
             return {"stage": stage_name, "final_output": final_output, "skipped": False}
         if stage_name == "remote_execution":
@@ -750,6 +751,23 @@ class ReadmeWorkflowCrew(Flow[WorkflowState]):
                 "family_index_js": family_index_js,
             },
             ensure_ascii=False,
+        )
+
+    def _print_readme_generation_terminal_output(self) -> None:
+        family_md = str(self.global_memory.memory_retrieve("family_md") or "").strip()
+        family_index_js = str(self.global_memory.memory_retrieve("family_index_js") or "").strip()
+        if not family_md and not family_index_js:
+            print("[readme_generation][output] empty family_md/family_index_js")
+            return
+        print("\nFinal Output:")
+        print(
+            json.dumps(
+                {
+                    "family_md": family_md,
+                    "family_index_js": family_index_js,
+                },
+                ensure_ascii=False,
+            )
         )
 
     @staticmethod

@@ -1,0 +1,17 @@
+# 基础依赖
+fastapi>=0.95.0
+uvicorn>=0.22.0
+pydantic>=1.10.0
+requests>=2.28.0
+
+# CrewAI 及其依赖（如有本地开发需求请参考官方文档）
+crewai>=0.10.0
+
+# 其他常用依赖
+python-dotenv>=1.0.0
+
+# 如需 notebook 支持可加
+# jupyter
+
+# 如需测试支持可加
+# pytest
