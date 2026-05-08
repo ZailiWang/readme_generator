@@ -36,8 +36,9 @@ adaptive_readme_generation_task:
       Xeon supports Instruct/Thinking and tool call parser.
       Xeon does not support speculative decoding or Mamba radix cache.
     - Enforce capability checks so unsupported combinations above are unselectable in generated tabs/options.
+    - Restore the selected configs to default when switching between hardware options to avoid invalid combinations.
     - In generateCommand, determine modelPath from the selected/input model_id.
-    - In generateCommand, set --tp 6 when hardware is xeon.
+    - In generateCommand, set --tp 6, --disable-overlap-schedule and --device cpu when hardware is xeon.
     - In generateCommand, add --quantization w8a8_int8 when Xeon uses INT8 quantization.
     - Add Intel CPU specific parameters when needed (for example CPU device selection, quantization flags, TP/NUMA hints).
     - In 3. Model Deployment, ensure the following sentence is included under Configuration Tips or Advanced Usage:
